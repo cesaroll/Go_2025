@@ -10,12 +10,9 @@ import (
 
 func main() {
 	var wg sync.WaitGroup
-	var receivedOrdersCh = make(chan order)
-	var validOrdersCh = make(chan order)
-	var invalidOrdersCh = make(chan invalidOrder)
 
-	go receiveOrders(receivedOrdersCh)
-	go validateOrders(receivedOrdersCh, validOrdersCh, invalidOrdersCh)
+	receivedOrdersCh := receiveOrders()
+	validOrdersCh, invalidOrdersCh := validateOrders(receivedOrdersCh)
 
 	wg.Add(1)
 	go func(validOrdersCh <-chan order, invalidOrdersCh <-chan invalidOrder) {
@@ -43,30 +40,43 @@ func main() {
 
 }
 
-func validateOrders(in <-chan order, valid chan<- order, invalid chan<- invalidOrder) {
-	for order := range in {
-		if order.Quantity <= 0 {
-			invalid <- invalidOrder{Order: order, Error: errors.New("quantity must be greater than 0")}
-		} else {
-			valid <- order
+func validateOrders(in <-chan order) (<-chan order, <-chan invalidOrder) {
+	valid := make(chan order)
+	invalid := make(chan invalidOrder, 1)
+
+	go func(valid chan<- order, invalid chan<- invalidOrder) {
+		for order := range in {
+			if order.Quantity <= 0 {
+				invalid <- invalidOrder{Order: order, Error: errors.New("quantity must be greater than 0")}
+			} else {
+				valid <- order
+			}
 		}
-	}
-	close(valid)
-	close(invalid)
+		close(valid)
+		close(invalid)
+	}(valid, invalid)
+
+	return valid, invalid
 }
 
-func receiveOrders(out chan<- order) {
-	for _, rawOrder := range rawOrders {
-		var newOrder order
-		err := json.Unmarshal([]byte(rawOrder), &newOrder)
-		if err != nil {
-			log.Print(err)
-			continue
+func receiveOrders() <-chan order {
+	out := make(chan order)
+
+	go func(out chan<- order) {
+		for _, rawOrder := range rawOrders {
+			var newOrder order
+			err := json.Unmarshal([]byte(rawOrder), &newOrder)
+			if err != nil {
+				log.Print(err)
+				continue
+			}
+			out <- newOrder
+			// fmt.Printf("New Order Received: %v\n", newOrder)
 		}
-		out <- newOrder
-		// fmt.Printf("New Order Received: %v\n", newOrder)
-	}
-	close(out)
+		close(out)
+	}(out)
+
+	return out
 }
 
 var rawOrders = []string{
