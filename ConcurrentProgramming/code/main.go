@@ -19,14 +19,23 @@ func main() {
 
 	wg.Add(1)
 	go func(validOrdersCh <-chan order, invalidOrdersCh <-chan invalidOrder) {
-
-		select {
-		case order := <-validOrdersCh:
-			fmt.Printf("Valid order received: %v\n", order)
-		case invalidOrder := <-invalidOrdersCh:
-			fmt.Printf("Invalid order received: %v. Issue: %v\n", invalidOrder.Order, invalidOrder.Error)
+	loop:
+		for {
+			select {
+			case order, ok := <-validOrdersCh:
+				if ok {
+					fmt.Printf("Valid order received: %v\n", order)
+				} else {
+					break loop
+				}
+			case invalidOrder, ok := <-invalidOrdersCh:
+				if ok {
+					fmt.Printf("Invalid order received: %v. Issue: %v\n", invalidOrder.Order, invalidOrder.Error)
+				} else {
+					break loop
+				}
+			}
 		}
-
 		wg.Done()
 	}(validOrdersCh, invalidOrdersCh)
 
@@ -35,12 +44,15 @@ func main() {
 }
 
 func validateOrders(in <-chan order, valid chan<- order, invalid chan<- invalidOrder) {
-	order := <-in
-	if order.Quantity <= 0 {
-		invalid <- invalidOrder{Order: order, Error: errors.New("quantity must be greater than 0")}
-	} else {
-		valid <- order
+	for order := range in {
+		if order.Quantity <= 0 {
+			invalid <- invalidOrder{Order: order, Error: errors.New("quantity must be greater than 0")}
+		} else {
+			valid <- order
+		}
 	}
+	close(valid)
+	close(invalid)
 }
 
 func receiveOrders(out chan<- order) {
@@ -52,12 +64,13 @@ func receiveOrders(out chan<- order) {
 			continue
 		}
 		out <- newOrder
-		fmt.Printf("New Order Received: %v\n", newOrder)
+		// fmt.Printf("New Order Received: %v\n", newOrder)
 	}
+	close(out)
 }
 
 var rawOrders = []string{
-	`{"ProductCode": 1111, "Quantity": 5, "Status": 1}`,
+	`{"ProductCode": 1111, "Quantity": -5, "Status": 1}`,
 	`{"ProductCode": 2222, "Quantity": 10, "Status": 1}`,
 	`{"ProductCode": 3333, "Quantity": 15, "Status": 1}`,
 	`{"ProductCode": 4444, "Quantity": 20, "Status": 1}`,
