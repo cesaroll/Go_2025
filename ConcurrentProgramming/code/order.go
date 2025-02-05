@@ -8,6 +8,11 @@ type order struct {
 	Status      orderStatus
 }
 
+type invalidOrder struct {
+	Order order
+	Error error
+}
+
 func (o order) String() string {
 	return fmt.Sprintf("ProductCode: %v, Quantity: %v, Status: %v\n",
 		o.ProductCode, o.Quantity, orderStatusToText(o.Status))
@@ -39,5 +44,3 @@ const (
 	reserved
 	filled
 )
-
-var orders = []order{}
