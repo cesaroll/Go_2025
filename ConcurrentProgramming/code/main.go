@@ -18,21 +18,22 @@ func main() {
 	go validateOrders(receivedOrdersCh, validOrdersCh, invalidOrdersCh)
 
 	wg.Add(1)
-	go func() {
+	go func(validOrdersCh <-chan order) {
 		order := <-validOrdersCh
 		fmt.Printf("Valid order received: %v\n", order)
 		wg.Done()
-	}()
-	go func() {
+	}(validOrdersCh)
+
+	go func(invalidOrdersCh <-chan invalidOrder) {
 		invalidOrder := <-invalidOrdersCh
 		fmt.Printf("Invalid order received: %v. Issue: %v\n", invalidOrder.Order, invalidOrder.Error)
 		wg.Done()
-	}()
+	}(invalidOrdersCh)
 	wg.Wait()
 
 }
 
-func validateOrders(in chan order, valid chan order, invalid chan invalidOrder) {
+func validateOrders(in <-chan order, valid chan<- order, invalid chan<- invalidOrder) {
 	order := <-in
 	if order.Quantity <= 0 {
 		invalid <- invalidOrder{Order: order, Error: errors.New("quantity must be greater than 0")}
@@ -41,7 +42,7 @@ func validateOrders(in chan order, valid chan order, invalid chan invalidOrder) 
 	}
 }
 
-func receiveOrders(out chan order) {
+func receiveOrders(out chan<- order) {
 	for _, rawOrder := range rawOrders {
 		var newOrder order
 		err := json.Unmarshal([]byte(rawOrder), &newOrder)
@@ -55,7 +56,7 @@ func receiveOrders(out chan order) {
 }
 
 var rawOrders = []string{
-	`{"ProductCode": 1111, "Quantity": -5, "Status": 1}`,
+	`{"ProductCode": 1111, "Quantity": 5, "Status": 1}`,
 	`{"ProductCode": 2222, "Quantity": 10, "Status": 1}`,
 	`{"ProductCode": 3333, "Quantity": 15, "Status": 1}`,
 	`{"ProductCode": 4444, "Quantity": 20, "Status": 1}`,
