@@ -54,11 +54,18 @@ func main() {
 	fmt.Printf("Id of added actor: %v\n", actorId)
 
 	// Read an actor
-	actor, err := readActor(actorId)
+	actor, err := getActor(actorId)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("Actor: %v\n", actor)
+
+	// Read all actors
+	actors, err := getAllActors()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Actors: %v\n", actors)
 }
 
 func addActor(actor Actor) (int64, error) {
@@ -75,7 +82,7 @@ func addActor(actor Actor) (int64, error) {
 	return id, nil
 }
 
-func readActor(id int64) (Actor, error) {
+func getActor(id int64) (Actor, error) {
 	var firstName, lastName string
 	var actor Actor
 	err := db.QueryRow("SELECT first_name, last_name FROM actors WHERE id = ?", id).Scan(&firstName, &lastName)
@@ -83,4 +90,23 @@ func readActor(id int64) (Actor, error) {
 		return actor, fmt.Errorf("readActor: %v", err)
 	}
 	return Actor{Id: id, FirstName: firstName, LastName: lastName}, nil
+}
+
+func getAllActors() ([]Actor, error) {
+	var actors []Actor
+	rows, err := db.Query("SELECT id, first_name, last_name FROM actors")
+	if err != nil {
+		return nil, fmt.Errorf("getAllActors: %v", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var actor Actor
+		err := rows.Scan(&actor.Id, &actor.FirstName, &actor.LastName)
+		if err != nil {
+			return nil, fmt.Errorf("getAllActors: %v", err)
+		}
+		actors = append(actors, actor)
+	}
+	return actors, nil
 }
