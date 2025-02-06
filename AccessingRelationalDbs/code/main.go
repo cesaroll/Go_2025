@@ -35,4 +35,23 @@ func main() {
 	}
 
 	fmt.Println("Connected!")
+
+	// Add an actor
+	actorId, err := addActor("Tom", "Hanks")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Id of added actor: %v\n", actorId)
+}
+
+func addActor(firstName string, lastName string) (int64, error) {
+	result, err := db.Exec("INSERT INTO actors (first_name, last_name) VALUES (?, ?)", firstName, lastName)
+	if err != nil {
+		return 0, fmt.Errorf("addActor: %v", err)
+	}
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("addActor: %v", err)
+	}
+	return id, nil
 }
