@@ -10,6 +10,12 @@ import (
 
 var db *sql.DB
 
+type Actor struct {
+	Id        int64
+	FirstName string
+	LastName  string
+}
+
 func main() {
 	// Data Source name properties
 	dsn := mysql.Config{
@@ -36,16 +42,29 @@ func main() {
 
 	fmt.Println("Connected!")
 
-	// Add an actor
-	actorId, err := addActor("Tom", "Hanks")
+	// Add an newActor
+	var newActor = Actor{
+		FirstName: "Tom",
+		LastName:  "Hanks",
+	}
+	actorId, err := addActor(newActor)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("Id of added actor: %v\n", actorId)
+
+	// Read an actor
+	actor, err := readActor(actorId)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Actor: %v\n", actor)
 }
 
-func addActor(firstName string, lastName string) (int64, error) {
-	result, err := db.Exec("INSERT INTO actors (first_name, last_name) VALUES (?, ?)", firstName, lastName)
+func addActor(actor Actor) (int64, error) {
+
+	result, err := db.Exec("INSERT INTO actors (first_name, last_name) VALUES (?, ?)",
+		actor.FirstName, actor.LastName)
 	if err != nil {
 		return 0, fmt.Errorf("addActor: %v", err)
 	}
@@ -54,4 +73,14 @@ func addActor(firstName string, lastName string) (int64, error) {
 		return 0, fmt.Errorf("addActor: %v", err)
 	}
 	return id, nil
+}
+
+func readActor(id int64) (Actor, error) {
+	var firstName, lastName string
+	var actor Actor
+	err := db.QueryRow("SELECT first_name, last_name FROM actors WHERE id = ?", id).Scan(&firstName, &lastName)
+	if err != nil {
+		return actor, fmt.Errorf("readActor: %v", err)
+	}
+	return Actor{Id: id, FirstName: firstName, LastName: lastName}, nil
 }
