@@ -63,6 +63,9 @@ func main() {
 	// Update an actor
 	actor.FirstName = "Tommy"
 	err = updateActor(actor)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Read all actors
 	actors, err := getAllActors()
