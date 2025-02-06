@@ -60,6 +60,10 @@ func main() {
 	}
 	fmt.Printf("Actor: %v\n", actor)
 
+	// Update an actor
+	actor.FirstName = "Tommy"
+	err = updateActor(actor)
+
 	// Read all actors
 	actors, err := getAllActors()
 	if err != nil {
@@ -109,4 +113,13 @@ func getAllActors() ([]Actor, error) {
 		actors = append(actors, actor)
 	}
 	return actors, nil
+}
+
+func updateActor(actor Actor) error {
+	_, err := db.Exec("UPDATE actors SET first_name = ?, last_name = ? WHERE id = ?",
+		actor.FirstName, actor.LastName, actor.Id)
+	if err != nil {
+		return fmt.Errorf("updateActor: %v", err)
+	}
+	return nil
 }
