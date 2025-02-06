@@ -73,6 +73,13 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Printf("Actors: %v\n", actors)
+
+	// Delete an actor
+	err = deleteActor(actor.Id)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Actor deleted %v\n", actor)
 }
 
 func addActor(actor Actor) (int64, error) {
@@ -123,6 +130,14 @@ func updateActor(actor Actor) error {
 		actor.FirstName, actor.LastName, actor.Id)
 	if err != nil {
 		return fmt.Errorf("updateActor: %v", err)
+	}
+	return nil
+}
+
+func deleteActor(id int64) error {
+	_, err := db.Exec("DELETE FROM actors WHERE id = ?", id)
+	if err != nil {
+		return fmt.Errorf("deleteActor: %v", err)
 	}
 	return nil
 }
