@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -47,7 +48,8 @@ func main() {
 		FirstName: "Tom",
 		LastName:  "Hanks",
 	}
-	actorId, err := addActor(newActor)
+	ctx := context.Background()
+	actorId, err := addActor(ctx, newActor)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -60,12 +62,20 @@ func main() {
 	}
 	fmt.Printf("Actor: %v\n", actor)
 
+	// Re-add actor would fail (to test transaction)
+	ctx = context.Background()
+	_, err = addActor(ctx, newActor)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Update an actor
 	actor.FirstName = "Tommy"
 	err = updateActor(actor)
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Printf("Actor name updated: %v\n", actor)
 
 	// Read all actors
 	actors, err := getAllActors()
@@ -82,14 +92,45 @@ func main() {
 	fmt.Printf("Actor deleted %v\n", actor)
 }
 
-func addActor(actor Actor) (int64, error) {
+func addActor(ctx context.Context, actor Actor) (int64, error) {
 
+	// Verify if actor exists before adding
+	// Begin transaction
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, fmt.Errorf("addActor: %v", err)
+	}
+	defer tx.Rollback()
+
+	// Check if name exists
+	var id int64
+	err = tx.QueryRowContext(ctx, "SELECT id FROM actors WHERE first_name = ? AND last_name = ?",
+		actor.FirstName, actor.LastName).Scan(&id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			fmt.Println("Actor does not exists")
+		} else {
+			return 0, fmt.Errorf("addActor: %v", err)
+		}
+	}
+
+	// Rollback if actor exists
+	if id > 0 {
+		if err = tx.Rollback(); err != nil {
+			return 0, fmt.Errorf("addActor: %v", err)
+		}
+		fmt.Println("Actor already exists", id)
+		fmt.Println("*** Transaction rolled back ***")
+		return id, nil
+	}
+
+	// Add actor
 	result, err := db.Exec("INSERT INTO actors (first_name, last_name) VALUES (?, ?)",
 		actor.FirstName, actor.LastName)
 	if err != nil {
 		return 0, fmt.Errorf("addActor: %v", err)
 	}
-	id, err := result.LastInsertId()
+	id, err = result.LastInsertId()
 	if err != nil {
 		return 0, fmt.Errorf("addActor: %v", err)
 	}
