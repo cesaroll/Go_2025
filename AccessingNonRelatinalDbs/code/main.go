@@ -36,9 +36,28 @@ func main() {
 	// Retrieve Actor
 	retrieveOne(actorsCollection, "Mili", "Bobby Brown")
 
+	// Update One Actor
+	updateActorAwards(actorsCollection, "Tom", "Cruise", 8)
+
 	// Retrieve Many
 	retrieveMany(actorsCollection, "Cruise")
 
+}
+
+func updateActorAwards(collection *mongo.Collection, firstName string, lastName string, awards int16) {
+
+	filter := bson.D{{"firstname", firstName}, {"lastname", lastName}}
+	update := bson.D{
+		{Key: "$set", Value: bson.D{
+			{Key: "awards", Value: awards},
+		}},
+	}
+
+	updateResult, err := collection.UpdateMany(context.TODO(), filter, update)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Matched %v actors and updated %v actors\n", updateResult.MatchedCount, updateResult.ModifiedCount)
 }
 
 func retrieveMany(collection *mongo.Collection, lastName string) []actor {
@@ -64,11 +83,11 @@ func retrieveMany(collection *mongo.Collection, lastName string) []actor {
 	return results
 }
 
-func retrieveOne(collection *mongo.Collection, firstName string, LastName string) actor {
+func retrieveOne(collection *mongo.Collection, firstName string, lastName string) actor {
 	var result actor
 
 	// filter := bson.D{}
-	filter := bson.D{{"firstname", firstName}, {"lastname", LastName}}
+	filter := bson.D{{"firstname", firstName}, {"lastname", lastName}}
 
 	err := collection.FindOne(context.TODO(), filter).Decode(&result)
 	if err != nil {
