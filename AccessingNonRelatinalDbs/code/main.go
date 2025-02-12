@@ -6,6 +6,9 @@ import (
 	"log"
 
 	"nosql/mongoDb"
+
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 func main() {
@@ -20,23 +23,73 @@ func main() {
 	}
 	defer mongoDb.DisconnectMongo(client) // Ensures disconnection when the program exits
 
-	// Insert One
-	tom := actor{"Tom", "Hanks", 9}
 	actorsCollection := getActorsCollection(client)
-	insertResult, err := actorsCollection.InsertOne(context.TODO(), tom)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("Inserted new Actor: ", insertResult.InsertedID)
+
+	// Insert One
+	insertOne(actorsCollection, actor{"Tom", "Cruise", 7})
 
 	// Insert Many
 	mark := actor{"Mark", "Hamil", 2}
 	mili := actor{"Mili", "Bobby Brown", 3}
-	actors := []interface{}{mark, mili}
-	insertManyResult, err := actorsCollection.InsertMany(context.TODO(), actors)
+	insertMany(actorsCollection, mark, mili)
+
+	// Retrieve Actor
+	retrieveOne(actorsCollection, "Mili", "Bobby Brown")
+
+	// Retrieve Many
+	retrieveMany(actorsCollection, "Cruise")
+
+}
+
+func retrieveMany(collection *mongo.Collection, lastName string) []actor {
+	var results []actor
+
+	filter := bson.D{{"lastname", lastName}}
+
+	cursor, err := collection.Find(context.TODO(), filter)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer cursor.Close(context.Background())
+
+	for cursor.Next(context.Background()) {
+		var result actor
+		err := cursor.Decode(&result)
+		if err != nil {
+			log.Fatal(err)
+		}
+		results = append(results, result)
+	}
+	fmt.Println("Actors Retrieved: ", results)
+	return results
+}
+
+func retrieveOne(collection *mongo.Collection, firstName string, LastName string) actor {
+	var result actor
+
+	// filter := bson.D{}
+	filter := bson.D{{"firstname", firstName}, {"lastname", LastName}}
+
+	err := collection.FindOne(context.TODO(), filter).Decode(&result)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Actor Retrieved: ", result)
+	return result
+}
+
+func insertOne(collection *mongo.Collection, actor actor) {
+	insertResult, err := collection.InsertOne(context.TODO(), actor)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Inserted new Actor: ", insertResult.InsertedID)
+}
+
+func insertMany(collection *mongo.Collection, actors ...actor) {
+	insertManyResult, err := collection.InsertMany(context.TODO(), actors)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println("Inserted multiple Actors: ", insertManyResult.InsertedIDs)
-
 }
