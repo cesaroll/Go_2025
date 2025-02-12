@@ -5,36 +5,27 @@ import (
 	"fmt"
 	"log"
 
-	"go.mongodb.org/mongo-driver/v2/mongo"
-	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"nosql/mongoDb"
 )
 
 func main() {
 
-	// Set client Options
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:32017")
+	// Define MongoDB URI
+	mongoURI := "mongodb://localhost:32017"
 
-	// Connect to mongoDB
-	client, err := mongo.Connect(clientOptions)
+	// Connect to MongoDB
+	client, err := mongoDb.ConnectMongo(mongoURI)
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer mongoDb.DisconnectMongo(client) // Ensures disconnection when the program exits
 
-	// Check the connection
-	err = client.Ping(context.TODO(), nil)
+	tom := actor{"Tom", "Hanks", 9}
+	actorsCollection := getActorsCollection(client)
+	insertResult, err := actorsCollection.InsertOne(context.TODO(), tom)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	fmt.Println(">> Connected to MongoDB!")
-
-	// Close the connection
-	err = client.Disconnect(context.TODO())
-
-	if err != nil {
-		log.Fatal(err)
-	} else {
-		fmt.Println("** Disconnected from MongoDB!")
-	}
+	fmt.Println("Inserted new Actor: ", insertResult.InsertedID)
 
 }
