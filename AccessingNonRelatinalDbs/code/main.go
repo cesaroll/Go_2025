@@ -25,6 +25,9 @@ func main() {
 
 	actorsCollection := getActorsCollection(client)
 
+	// Delete All Actors
+	deleteAllActors(actorsCollection)
+
 	// Insert One
 	insertOne(actorsCollection, actor{"Tom", "Cruise", 7})
 
@@ -42,6 +45,15 @@ func main() {
 	// Retrieve Many
 	retrieveMany(actorsCollection, "Cruise")
 
+}
+
+func deleteAllActors(collection *mongo.Collection) {
+	filter := bson.D{}
+	deleteResult, err := collection.DeleteMany(context.TODO(), filter)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Deleted %v actors\n", deleteResult.DeletedCount)
 }
 
 func updateActorAwards(collection *mongo.Collection, firstName string, lastName string, awards int16) {
