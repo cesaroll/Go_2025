@@ -10,3 +10,11 @@ func (app *application) healthcheck(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "environment: %s\n", app.config.env)
 	fmt.Fprintf(w, "version: %s\n", version)
 }
+
+func (app *application) getCreateBooksHandler(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func (app *application) getUpdateDeleteBooksHandler(w http.ResponseWriter, r *http.Request) {
+
+}
